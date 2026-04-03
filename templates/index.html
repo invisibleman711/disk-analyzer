@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>磁盘空间整理工具</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="bg-grain"></div>
+    <div class="app">
+        <header class="header">
+            <div class="header-inner">
+                <div class="logo-mark">
+                    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+                        <rect x="2" y="6" width="28" height="20" rx="4" stroke="currentColor" stroke-width="2"/>
+                        <rect x="6" y="10" width="8" height="6" rx="1.5" fill="var(--accent)"/>
+                        <rect x="6" y="18" width="5" height="4" rx="1" fill="var(--accent-soft)"/>
+                        <rect x="13" y="18" width="5" height="4" rx="1" fill="var(--accent-soft)"/>
+                        <rect x="16" y="10" width="10" height="3" rx="1" fill="var(--accent-light)"/>
+                        <rect x="16" y="15" width="7" height="2" rx="1" fill="var(--accent-light)"/>
+                        <circle cx="26" cy="22" r="2" fill="var(--accent)"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1>磁盘空间整理</h1>
+                    <p class="subtitle">分析存储 · 管理缓存 · 释放空间</p>
+                </div>
+            </div>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="overview">
+                <span class="tab-icon">&#9673;</span>
+                磁盘概览
+            </button>
+            <button class="tab" data-tab="files">
+                <span class="tab-icon">&#9776;</span>
+                文件浏览
+            </button>
+            <button class="tab" data-tab="apps">
+                <span class="tab-icon">&#9638;</span>
+                应用程序
+            </button>
+            <button class="tab" data-tab="cache">
+                <span class="tab-icon">&#9851;</span>
+                缓存管理
+            </button>
+            <button class="tab" data-tab="suggestions">
+                <span class="tab-icon">&#9733;</span>
+                优化建议
+            </button>
+        </nav>
+
+        <main class="content">
+            <!-- 磁盘概览 -->
+            <section id="tab-overview" class="tab-content active">
+                <div class="section-header">
+                    <h2>磁盘使用概览</h2>
+                    <button class="btn btn-primary" onclick="loadDisks()">刷新</button>
+                </div>
+                <div id="disk-list" class="disk-list">
+                    <div class="loading"><div class="spinner"></div>正在加载磁盘信息...</div>
+                </div>
+            </section>
+
+            <!-- 文件浏览 -->
+            <section id="tab-files" class="tab-content">
+                <div class="section-header">
+                    <h2>文件浏览器</h2>
+                    <div class="path-bar">
+                        <button class="btn btn-sm" onclick="browseParent()">↑ 上级</button>
+                        <button class="btn btn-sm" onclick="browsePath('~')">主目录</button>
+                        <span id="current-path" class="current-path">~</span>
+                    </div>
+                </div>
+                <div class="controls-row">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="show-hidden" onchange="refreshBrowse()">
+                        <span class="toggle-switch"></span>
+                        显示隐藏文件
+                    </label>
+                    <div id="type-legend" class="type-legend"></div>
+                </div>
+                <div id="file-list" class="file-table-container">
+                    <div class="loading"><div class="spinner"></div>选择目录开始浏览...</div>
+                </div>
+            </section>
+
+            <!-- 应用程序 -->
+            <section id="tab-apps" class="tab-content">
+                <div class="section-header">
+                    <h2>应用程序分析</h2>
+                    <button class="btn btn-primary" onclick="loadApps()">扫描应用</button>
+                </div>
+                <div class="legend">
+                    <span class="legend-item"><span class="dot dot-system"></span> 系统应用（不可删除）</span>
+                    <span class="legend-item"><span class="dot dot-user"></span> 用户安装应用</span>
+                    <span class="legend-item hint">点击应用可展开查看内部文件组成</span>
+                </div>
+                <div id="app-summary" class="summary-bar" style="display:none;"></div>
+                <div id="app-list" class="app-list">
+                    <div class="loading"><div class="spinner"></div>点击"扫描应用"开始分析...</div>
+                </div>
+            </section>
+
+            <!-- 缓存管理 -->
+            <section id="tab-cache" class="tab-content">
+                <div class="section-header">
+                    <h2>缓存管理</h2>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="loadCaches()">扫描缓存</button>
+                        <button class="btn btn-danger" id="btn-clean" onclick="cleanSelected()" style="display:none;">
+                            清理选中项
+                        </button>
+                    </div>
+                </div>
+                <div id="cache-summary" class="summary-bar" style="display:none;"></div>
+                <div id="cache-select-all" class="cache-select-all" style="display:none;">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="cache-check-all" onchange="toggleAllCaches(this.checked)">
+                        <span class="toggle-switch"></span>
+                        全选可清理项
+                    </label>
+                    <span id="cache-selected-info" class="cache-selected-info"></span>
+                </div>
+                <div id="cache-list" class="cache-list">
+                    <div class="loading"><div class="spinner"></div>点击"扫描缓存"开始分析...</div>
+                </div>
+            </section>
+
+            <!-- 优化建议 -->
+            <section id="tab-suggestions" class="tab-content">
+                <div class="section-header">
+                    <h2>优化建议</h2>
+                    <button class="btn btn-primary" onclick="loadSuggestions()">生成建议</button>
+                </div>
+                <div id="suggestion-list" class="suggestion-list">
+                    <div class="loading"><div class="spinner"></div>点击"生成建议"进行全面分析...</div>
+                </div>
+            </section>
+        </main>
+
+        <!-- 确认对话框 -->
+        <div id="confirm-dialog" class="dialog-overlay" style="display:none;">
+            <div class="dialog">
+                <h3>确认清理</h3>
+                <p id="confirm-message"></p>
+                <div id="confirm-items" class="confirm-items"></div>
+                <div class="dialog-actions">
+                    <button class="btn" onclick="closeDialog()">取消</button>
+                    <button class="btn btn-danger" onclick="confirmClean()">确认删除</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast" style="display:none;"></div>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>
